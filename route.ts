@@ -244,11 +244,65 @@ export async function GET(req: Request): Promise<Response> {
 		}
 
 		const url = new URL(req.url);
-		// Health check: verify env/SDK init only, no session started
+		// Health check: verify configuration AND perform a real API check for API key mode
 		if (url.searchParams.get("health") === "1") {
 			const headers = corsHeaders(req.headers.get("origin") || undefined);
-			// 204: No Content, indicates server is properly configured
-			return new Response(null, { status: 204, headers });
+			try {
+				const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === "true";
+				if (useVertex) {
+					// For Vertex AI we validate required envs are present; a full token check requires ADC and scopes.
+					const project = process.env.GOOGLE_CLOUD_PROJECT;
+					const location = process.env.GOOGLE_CLOUD_LOCATION;
+					if (!project || !location) {
+						headers.set("content-type", "application/json");
+						return new Response(
+							JSON.stringify({
+								error: "Missing GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_LOCATION",
+							}),
+							{ status: 500, headers },
+						);
+					}
+					return new Response(null, { status: 204, headers });
+				}
+
+				const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+				if (!apiKey) {
+					headers.set("content-type", "application/json");
+					return new Response(
+						JSON.stringify({
+							error: "Missing GOOGLE_API_KEY or GEMINI_API_KEY",
+						}),
+						{ status: 500, headers },
+					);
+				}
+				const ver = (process.env.GOOGLE_GENAI_API_VERSION || "v1").replace(
+					/^v(\d)(.*)$/,
+					"v$1$2",
+				);
+				const checkUrl = `https://generativelanguage.googleapis.com/${ver}/models?key=${encodeURIComponent(apiKey)}`;
+				const resp = await fetch(checkUrl, {
+					method: "GET",
+					cache: "no-store",
+				});
+				if (resp.ok) {
+					return new Response(null, { status: 204, headers });
+				}
+				headers.set("content-type", "application/json");
+				const text = await resp.text().catch(() => "");
+				return new Response(
+					JSON.stringify({
+						error: `Google API health failed: ${resp.status}`,
+						body: text.slice(0, 300),
+					}),
+					{ status: 500, headers },
+				);
+			} catch (e) {
+				headers.set("content-type", "application/json");
+				return new Response(JSON.stringify({ error: (e as Error).message }), {
+					status: 500,
+					headers,
+				});
+			}
 		}
 
 		const modelOverride = url.searchParams.get("model") ?? undefined;

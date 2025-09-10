@@ -102,3 +102,48 @@ fetch('/api/gemini-stream', {
 ## Configuration
 
 Set these environment variables:
+
+```env
+# Gemini Developer API
+GOOGLE_API_KEY=your_api_key
+
+# OR Vertex AI
+GOOGLE_GENAI_USE_VERTEXAI=true
+GOOGLE_CLOUD_PROJECT=your_project
+GOOGLE_CLOUD_LOCATION=us-central1
+
+# CORS (optional)
+CORS_ALLOW_ORIGINS="https://your-app.com,http://localhost:3000"
+CORS_ALLOW_CREDENTIALS=true
+```
+
+---
+
+## Advanced Features
+
+- **Conversational Memory**: Auto-appends chat history to subsequent requests
+- **Interruptions**: Handle `abort.signal` for real-time interruption
+- **Emotion Detection**: Analyze voice tone via audio waveform metadata
+- **Accessibility**: Screen reader support through ARIA-compliant responses
+
+---
+
+## Troubleshooting
+
+| Error                | Solution                                      |
+|----------------------|-----------------------------------------------|
+| Missing API key      | Set `GOOGLE_API_KEY` in `.env.local`          |
+| CORS blocked         | Verify `CORS_ALLOW_ORIGINS` matches your domain |
+| No audio output      | Check browser autoplay policies and permissions|
+| Slow responses       | Use `gemini-2.5-flash` model for faster inference |
+
+---
+
+## Ethical Guidelines
+
+- Always obtain user consent before accessing screen/camera
+- Anonymize sensitive data in screenshots
+- Provide opt-out for voice recording
+- Comply with GDPR/CCPA for data processing
+
+> **Note:** Screen access requires HTTPS and user permission. Actual implementation depends on client-side integration.
